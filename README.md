@@ -3,7 +3,7 @@
 <!-- badges: start -->
 
 [![Software
-License](https://img.shields.io/badge/license-MIT-green)](https://github.com/M3nin0/odcsits/blob/master/LICENSE)
+License](https://img.shields.io/badge/license-MIT-green)](https://github.com/brazil-data-cube/odc-sits/blob/master/LICENSE)
 [![Software Life
 Cycle](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://www.tidyverse.org/lifecycle/#experimental)
 [![Join us at
