@@ -21,8 +21,8 @@ index <- odc_index(
 #
 # Search ODC Datasets
 #
-roi     <- readRDS(url("https://brazildatacube.dpi.inpe.br/geo-knowledge-hub/bdc-article/roi/roi.rds"))
-sample_file <- "samples/samples.csv"
+roi         <- readRDS(url("https://brazildatacube.dpi.inpe.br/geo-knowledge-hub/bdc-article/roi/roi.rds"))
+sample_file <- "https://brazildatacube.dpi.inpe.br/public/bdc-article/training-samples/training-samples.csv"
 
 datasets <- odc_search(
   odc_index  = index,
