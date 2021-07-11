@@ -1,14 +1,10 @@
-
 #' @title Brazil Data Cube File Parser Metadata
 #'
 #' @rdname bdc_parser
 #'
-#' @description ...
-#'
-#' @param odc_index ...
-#' @param satellite ...
-#' @param sensor ...
-#' @param datasets ...
+#' @description Example parser for extracting information from files used for
+#' generating the \code{odc_cube}. This is the default parser used by
+#' \code{odc-sits} when the data is loaded.
 #'
 #' @export
 bdc_parser <- function() {

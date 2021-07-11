@@ -1,124 +1,78 @@
-#' @title ODC Complete Cube
+#' @title Open Data Cube data
 #'
 #' @rdname odc_cube
 #'
-#' @description ...
+#' @description Data cube created with data indexed in an Open Data Cube
+#' instance. The construction of the data cube is based on the data structures
+#' in the \code{sits} package.
 #'
-#' @param odc_index ...
-#' @param satellite ...
-#' @param sensor ...
-#' @param datasets ...
+#' @note It is assumed that the data loaded by the \code{odc_cube} function is
+#' aligned in time and space. If the data does not have these properties,
+#' the function may have problems.
+#'
+#' @param satellite Satellite that produced the images. This name must match
+#'                  the satellites that are declared in the \code{sits} package
+#'                  configuration file. (see details below)
+#' @param sensor    Sensor that produced the images. (see details below)
+#' @param datasets  a \code{tibble} object from class \code{odcsits} with the
+#'                  datasets that will be loaded from ODC instance to build
+#'                  the data cube.
+#' @param .parser   a \code{list} with parsing information for files.
+#'
+#' @details The "satellite" and "sensor" parameters must match the declarations
+#' made in the \code{sits} package configuration file.
+#'
+#' @details The ".parser" it is an optional parameter that can be used to declare
+#' the naming pattern of the files indexed by the Open Data Cube. This pattern
+#' will be used to define the characteristics of the data cube that will
+#' be generated. For this parameter a named \code{vector} ("delim", "parse_info")
+#' is expected. The value of "delim" is used to determine the separator in the
+#' name of the files loaded from the ODC. On the other hand, the "parse_info"
+#' parameter determines what information is represented by each position in the
+#' configuration file. For example, for the file name:
+#'
+#'    CB4_64_16D_STK_v001_022024_2019-10-16_2019-10-31_BAND15
+#'
+#' The ".parser" parameter will be:
+#'
+#' .parser = list(
+#'  delim = "_",
+#'  parse_info = c("sat", "res", "X1", "X2", "X3", "tile", "date", "X4", "band")
+#' )
+#'
+#' This will split the file name using "_" and the positions have the meaning
+#'  represented in "parse_info". In this case:
+#'
+#'   sat = CB4
+#'   res = 64
+#'   tile = 022024
+#'   date = 2019-10-16_2019-10-31
+#'   band = BAND15
+#'
+#' The "Xx" values represent values that should not be used.
 #'
 #' @export
-odc_cube <- function(odc_index, satellite, sensor, datasets, parser = bdc_parser())
+odc_cube <- function(satellite, sensor, datasets, .parser = bdc_parser())
 {
-    if (!.check_parser(parser))
-        .error("Parser is not valid! Please define `delim` and `parse_info`")
+    if (!inherits(datasets, "odcsits"))
+        .error(paste("The given `datasets` does not correspond to a Open Data Cube",
+                "Please use the `odc_search` function. to retrieve valid datasets"))
 
-    uuids <- paste(datasets$id, collapse = ",")
-    rs    <- DBI::dbSendQuery(
-        odc_index,
-        sprintf(
-            "SELECT
-                  *
-              FROM
-                  tmp_dataset_collection_sits_odc
-              WHERE
-                  id LIKE ANY('{%s}');",
-            uuids
-        )
-    )
-    datasets_reference <- DBI::dbFetch(rs)
+    if (!.check_parser(.parser))
+        .error("Parser is not valid! Please define `delim` and `parse_info`")
 
     # create the data cube
     bands_directory <-
-        lapply(datasets_reference$bands, function(row) {
+        lapply(datasets$datasets_files$bands, function(row) {
             dirname(jsonlite::parse_json(row)[[1]]$path)
         })
 
     cube <- sits::sits_cube(
-        type = "STACK",
+        source = "LOCAL",
         satellite = satellite,
         sensor = sensor,
         data_dir = unlist(bands_directory),
-        delim = parser$delim,
-        parse_info = parser$parse_info
-    )
-}
-
-
-#' @title ODC Brick Cube
-#'
-#' @rdname odc_brick
-#'
-#' @description ...
-#'
-#' @param odc_index ...
-#' @param satellite ...
-#' @param sensor
-#' @param datasets ...
-#' @param ... ...
-#'
-#' @export
-#' @export
-odc_brick <- function(odc_index, satellite, sensor, datasets, ...) {
-    uuids <- paste(datasets$id, collapse = ",")
-    rs    <- DBI::dbSendQuery(odc_index, sprintf("SELECT
-                                              *
-                                          FROM
-                                              tmp_dataset_collection_sits_odc
-                                          WHERE
-                                              id LIKE ANY('{%s}');", uuids))
-    datasets_reference <- DBI::dbFetch(rs)
-
-    # create the data cube
-    base_dir  <- tempdir()
-
-    tiles_brick <-
-        lapply(unique(datasets_reference$date), function(date_row) {
-            brick_reference <-
-                datasets_reference[datasets_reference$date == date_row, ]
-
-            # brick in ODC use `path` and `layer` fields
-            brick_bands_file <- as.data.frame(do.call(rbind, lapply(
-                jsonlite::stream_in(textConnection(
-                    gsub("\\n", "", brick_reference$bands)
-                )), as.vector
-            )))
-
-            brick_bands_file <-
-                brick_bands_file[order(unlist(brick_bands_file$layer)), ]
-
-            # for each band, group tile and create a vrt
-            rbind(by(brick_bands_file, brick_bands_file$layer, function(x) {
-                layerref  <- unique(x$layer)
-                layername <- strsplit(rownames(x)[1], ".1")[[1]]
-
-                gdalfiles <-
-                    unlist(lapply(strsplit(x$path, "file://"), function(x)
-                        x[2]))
-
-                vrt_file <-
-                    paste(base_dir,
-                          "/",
-                          basename(strsplit(gdalfiles[1], split = ".tif")[[1]][1]),
-                          "_",
-                          layername,
-                          ".vrt",
-                          sep = "")
-
-                gdalUtils::gdalbuildvrt(gdalfile   = gdalfiles,
-                                        output.vrt = vrt_file,
-                                        b    = layerref, tr = c(30, 30))
-                vrt_file
-            }))
-        })
-
-    sits::sits_cube(
-        type = "STACK",
-        satellite = satellite,
-        sensor = sensor,
-        data_dir = base_dir,
-        ...
+        delim = .parser$delim,
+        parse_info = .parser$parse_info
     )
 }

@@ -1,7 +1,10 @@
 #' @title Metadata View
 #' @name metadata query view
 #'
-#' @description ...
+#' @description This function creates a temporary database view in the
+#' Open Data Cube that makes it easy to search for other operations.
+#' In addition, the created view provides spatio-temporal, bands, and CRS
+#' information of the indexed datasets.
 #'
 #' @export
 .odc_query_view <- function()
@@ -9,7 +12,7 @@
   "
   CREATE TEMPORARY VIEW tmp_dataset_collection_sits_odc AS (
 	SELECT
-		dataset_type.name AS collection,
+		dataset_type.name AS product,
 		dataset.metadata ->> 'id' AS id,
 		ST_MakeEnvelope(
 			(dataset.metadata -> 'extent' -> 'coord' -> 'll' -> 'lon')::float,
@@ -29,17 +32,22 @@
   "
 }
 
-#' @title ODC Products Search
+#' @title Open Data Cube Index
 #'
 #' @rdname odc_index
 #'
-#' @description ...
+#' @description Creates the connection to the Open Data Cube database.
+#' This function generates a list of the class \code{odcsits-index} that allows
+#' the connection to and manipulation of the database.
 #'
-#' @param dbname ...
-#' @param host ...
-#' @param port ...
-#' @param user ...
-#' @param password ...
+#' @note It is recommended that the database information be stored in
+#' environment variables, avoiding direct exposure of the user/password in the code.
+#'
+#' @param dbname Open Data Cube Database name
+#' @param host Open Data Cube Database host
+#' @param port Open Data Cube Database port
+#' @param user Open Data Cube Database user
+#' @param password Open Data Cube Database password
 #'
 #' @export
 odc_index <- function(dbname, host, port, user, password) {
@@ -55,5 +63,9 @@ odc_index <- function(dbname, host, port, user, password) {
   # create a temporary view (client instance)
   DBI::dbSendQuery(conn, .odc_query_view())
 
-  conn
+  structure(
+    list(
+      database_index = conn
+    ), class = "odcsits-index"
+  )
 }
