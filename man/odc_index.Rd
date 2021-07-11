@@ -2,21 +2,27 @@
 % Please edit documentation in R/odc_index.R
 \name{odc_index}
 \alias{odc_index}
-\title{ODC Products Search}
+\title{Open Data Cube Index}
 \usage{
 odc_index(dbname, host, port, user, password)
 }
 \arguments{
-\item{dbname}{...}
+\item{dbname}{Open Data Cube Database name}
 
-\item{host}{...}
+\item{host}{Open Data Cube Database host}
 
-\item{port}{...}
+\item{port}{Open Data Cube Database port}
 
-\item{user}{...}
+\item{user}{Open Data Cube Database user}
 
-\item{password}{...}
+\item{password}{Open Data Cube Database password}
 }
 \description{
-...
+Creates the connection to the Open Data Cube database.
+This function generates a list of the class \code{odcsits-index} that allows
+the connection to and manipulation of the database.
+}
+\note{
+It is recommended that the database information be stored in
+environment variables, avoiding direct exposure of the user/password in the code.
 }

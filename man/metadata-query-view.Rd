@@ -8,5 +8,8 @@
 .odc_query_view()
 }
 \description{
-...
+This function creates a temporary database view in the
+Open Data Cube that makes it easy to search for other operations.
+In addition, the created view provides spatio-temporal, bands, and CRS
+information of the indexed datasets.
 }
