@@ -2,9 +2,9 @@ library(sits)
 library(odcsits)
 
 #
-# general definitions
+# General definitions
 #
-classification_memsize    <- 16
+classification_memsize    <- 6
 classification_multicores <- 8
 
 #
@@ -19,34 +19,47 @@ index <- odc_index(
 )
 
 #
-# Search ODC Datasets
+# Load Sample file
 #
-roi         <- readRDS(url("https://brazildatacube.dpi.inpe.br/geo-knowledge-hub/bdc-article/roi/roi.rds"))
 sample_file <- "https://brazildatacube.dpi.inpe.br/public/bdc-article/training-samples/training-samples.csv"
 
+#
+# Search ODC Products
+#
+odc_products(index)
+
+#
+# Search ODC Datasets
+#
 datasets <- odc_search(
-  odc_index  = index,
-  collection = "CB4_64_16D_STK_1",
+  index      = index,
+  product    = "CB4_64_16D_STK_1",
   start_date = "2018-09-01",
   end_date   = "2019-08-01"
 )
 
 #
-# Generate the data cube
+# Generate the ODC data cube
 #
-cube <- odc_cube(index, "CBERS-4", "AWFI", datasets)
-cube$timeline[[1]][[1]] <- sort(cube$timeline[[1]][[1]])
+cube <- odc_cube("CBERS-4", "AWFI", datasets)
+
+# SITS Usage!
 
 #
 # Extract time series
 #
-samples <- sits_get_data(cube, file = sample_file)
-saveRDS(samples, file = "samples/bdc_paper_samples_ts.rds")
+samples <- sits_get_data(cube,
+                         file       = sample_file,
+                         multicores = classification_multicores)
 
 #
 # Train model
 #
-rfor <- sits_train(samples, ml_method = sits_rfor(num_trees = 1000))
+rfor <- sits_train(
+    samples, ml_method = sits_rfor(
+        num_trees = 1000
+    )
+)
 
 #
 # Classify using the data cubes
@@ -55,8 +68,8 @@ probs <- sits_classify(
   data       = cube,
   ml_model   = rfor,
   memsize    = classification_memsize,
-  multicores = classification_multicores,
-  roi        = roi$classification_roi)
+  multicores = classification_multicores
+)
 
 #
 # Post-processing
@@ -70,15 +83,15 @@ labels         <- sits_label_classification(probs_smoothed)
 
 # Labels
 saveRDS(
-  labels, file = paste0("labels.rds")
+  labels, file = "labels.rds"
 )
 
 # Probs
 saveRDS(
-  probs, file = paste0("probs_cube.rds")
+  probs, file = "probs_cube.rds"
 )
 
 # Smoothed probs
 saveRDS(
-  probs_smoothed, file = paste0("probs_smoothed_cube.rds")
+  probs_smoothed, file = "probs_smoothed_cube.rds"
 )
